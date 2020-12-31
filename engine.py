@@ -48,12 +48,13 @@ class Engine:
     def best_move(self, board: chess.Board):
         # currently does only one move look-ahead
         high = -1000000
+        best_move = None
         for move in board.legal_moves:
             board.push(move)
             rating = self.evaluator.func(board)
             if rating > high:
                 high = rating
                 best_move = move
-            board.pop(move)
+            board.pop()
         return best_move
 
