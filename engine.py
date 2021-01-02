@@ -46,7 +46,9 @@ class Engine:
         self.color = color
 
     def best_move(self, board: chess.Board):
-        # currently does only one move look-ahead
+        if board.turn != self.color:
+            raise ColorError
+
         high = -1000000
         best_move = None
         for move in board.legal_moves:
@@ -57,4 +59,3 @@ class Engine:
                 best_move = move
             board.pop()
         return best_move
-
