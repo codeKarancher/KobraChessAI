@@ -135,7 +135,7 @@ class DataGenerator(keras.utils.Sequence):
         return board
 
 
-training_generator = DataGenerator(stockfish_depth=10)
+training_generator = DataGenerator()
 validation_generator = DataGenerator(seeds=np.arange(16384, 16384 + 4096)) # 4096 validation cases
 
 input = keras.Input(shape=(64,), batch_size=32)
@@ -146,5 +146,5 @@ output = keras.layers.Dense(1)(x)
 model = keras.Model(inputs=input, outputs=output)
 
 model.compile(optimizer='adam', loss=keras.losses.mean_squared_error)
-model.fit(training_generator, validation_data=validation_generator, use_multiprocessing=True, workers=6, verbose=True, epochs=3)
+model.fit(training_generator, validation_data=validation_generator, use_multiprocessing=True, workers=6, verbose=True, epochs=4)
 model.save("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn2")

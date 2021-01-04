@@ -34,7 +34,10 @@ def boardToNNInput(board: chess.Board):
     array = np.zeros(64, dtype=int)
     piecesDict = board.piece_map()
     for square in piecesDict:
-        array[square] = piece_cp_values[piecesDict.get(square).piece_type]
+        if piecesDict.get(square).color == chess.WHITE:
+            array[square] = piece_cp_values[piecesDict.get(square).piece_type]
+        else:
+            array[square] = -piece_cp_values[piecesDict.get(square).piece_type]
     return np.array([array])
 
 
