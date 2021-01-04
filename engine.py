@@ -19,7 +19,24 @@ import chess
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
-import scipy.optimize
+
+piece_cp_values = {
+    chess.PAWN: 100,
+    chess.KNIGHT: 300,
+    chess.BISHOP: 300,
+    chess.ROOK: 500,
+    chess.QUEEN: 900,
+    chess.KING: 0
+}
+
+
+def boardToNNInput(board: chess.Board):
+    array = np.zeros(64, dtype=int)
+    piecesDict = board.piece_map()
+    for square in piecesDict:
+        array[square] = piece_cp_values[piecesDict.get(square).piece_type]
+    return np.array([array])
+
 
 class Evaluator:
 
@@ -34,16 +51,8 @@ class Evaluator:
     def __init__(self, model: keras.Model):
         self.model = model
 
-    def boardToNNRepresentation(self, board: chess.Board):
-        array = np.zeros(64)
-        piecesDict = board.piece_map()
-        for square in piecesDict:
-            array[square] = piecesDict.get(square).piece_type
-        return array
-
     def func(self, board: chess.Board):
-        input = self.boardToNNRepresentation(board)
-        return self.model(np.array(input))
+        return self.model.predict(np.array(boardToNNInput(board)))
 
     @classmethod
     def randomModelFromModel(cls, model: keras.Model, deviation=1):
@@ -52,9 +61,11 @@ class Evaluator:
             layer.set_weights(np.random.uniform(layer.get_weights() - deviation, layer.get_weights() + deviation))
         return Evaluator(new_model)
 
+
 class ColorError(Exception):
     """Raised if the wrong chess color was detected"""
     pass
+
 
 class Engine:
 
@@ -62,16 +73,23 @@ class Engine:
         self.evaluator = evaluator
         self.color = color
 
-    def best_move(self, board: chess.Board):
+    def best_move(self, board: chess.Board) -> chess.Move:
+        print("Finding best move")
         if board.turn != self.color:
             raise ColorError
-
+        def is_better(x,y):
+            if self.color == chess.WHITE:
+                return x > y
+            else:
+                return y > x
         high = -1000000
+        if self.color == chess.BLACK:
+            high = 1000000
         best_move = None
         for move in board.legal_moves:
             board.push(move)
             rating = self.evaluator.func(board)
-            if rating > high:
+            if is_better(rating, high):
                 high = rating
                 best_move = move
             board.pop()

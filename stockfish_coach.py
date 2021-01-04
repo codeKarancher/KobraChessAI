@@ -19,72 +19,132 @@ import chess
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
+import stockfish
+from engine import boardToNNInput
 
 
+class MyStockfishBoardEvaluator(stockfish.Stockfish):
+
+    def __init__(self, depth=10):
+        super().__init__(path="/usr/local/Cellar/stockfish/12/bin/stockfish", depth=depth)
+        self.int_depth = depth
+
+    def get_evaluation_depth_limited(self) -> dict:
+        """Evaluates current position
+
+        Returns:
+            A dictionary of the current advantage with "type" as "cp" (centipawns) or "mate" (checkmate in)
+        """
+
+        evaluation = dict()
+        fen = self.get_fen_position()
+        if "w" in fen:  # w can only be in FEN if it is whites move
+            compare = 1
+        else:  # stockfish shows advantage relative to current player, convention is to do white positive
+            compare = -1
+        self._put("position " + fen + "\n go")
+        curdepth = 0
+        while curdepth <= self.int_depth:
+            text = self._read_line()
+            splitted_text = text.split(" ")
+            if "depth" in splitted_text:
+                curdepth = int(splitted_text[splitted_text.index("depth") + 1])
+            if splitted_text[0] == "info" and "score" in splitted_text:
+                n = splitted_text.index("score")
+                evaluation = {"type" : splitted_text[n + 1],
+                              "value" : int(splitted_text[n + 2])}
+            elif splitted_text[0] == "bestmove":
+                return evaluation
+        return evaluation
 
 class DataGenerator(keras.utils.Sequence):
 
-    def __init__(self, list_IDs, labels, batch_size=32, dim=(32,32,32), n_channels=1,
-                 n_classes=10, shuffle=True):
+    def __init__(self, seeds=np.arange(0, 16384), list_n_moves=np.arange(25, 125), batch_size=32, dim=(64,),
+                 shuffle=True, stockfish_depth=10):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
-        self.labels = labels
-        self.list_IDs = list_IDs
-        self.n_channels = n_channels
-        self.n_classes = n_classes
+        self.seeds = seeds
         self.shuffle = shuffle
+        self.list_n_moves = list_n_moves
+        self.stockfish_depth = stockfish_depth
+        self.init_stockfish()
         self.on_epoch_end()
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(len(self.list_IDs) / self.batch_size))
+        return int(np.floor(len(self.seeds) / self.batch_size))
 
     def __getitem__(self, index):
         'Generate one batch of data'
         # Generate indexes of the batch
-        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
 
-        # Find list of IDs
-        list_IDs_temp = [self.list_IDs[k] for k in indexes]
+        # Find list of IDs (seeds)
+        seeds_temp = [self.seeds[k] for k in indexes]
 
         # Generate data
-        X, y = self.__data_generation(list_IDs_temp)
+        x, y = self.__data_generation(seeds_temp)
+        return (x, y)
 
-        return X, y
+    def init_stockfish(self):
+        self.stockfish = MyStockfishBoardEvaluator(self.stockfish_depth)
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
-        self.indexes = np.arange(len(self.list_IDs))
+        self.indexes = np.arange(len(self.seeds))
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
 
-    def __data_generation(self, list_IDs_temp):
-        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
+    def __data_generation(self, seeds_temp):
+        'Generates data containing batch_size samples'
         # Initialization
-        X = np.empty((self.batch_size, *self.dim, self.n_channels))
+        x = np.empty((self.batch_size, *self.dim))
         y = np.empty((self.batch_size), dtype=int)
 
         # Generate data
-        for i, ID in enumerate(list_IDs_temp):
-            # Store sample
-            X[i,] = np.load('data/' + ID + '.npy')
+        for i, seedID in enumerate(seeds_temp):
+            board = self.__random_board(seedID)
+            x[i,] = boardToNNInput(board)
+            self.stockfish.__del__()
+            self.init_stockfish()
+            self.stockfish.set_fen_position(board.fen())
+            eval = self.stockfish.get_evaluation_depth_limited()
+            if eval["type"] == "cp":
+                y[i] = eval["value"]
+            else:  # mate
+                y[i] = (10 - eval["value"]) * 200
+        return x, y
 
-            # Store class
-            y[i] = self.labels[ID]
-
-        return X, keras.utils.to_categorical(y, num_classes=self.n_classes)
-
-    def __random_board(num_moves, seed=None):
-        if seed != None:
-            np.random.seed(seed)
-        choices = np.random.uniform(0, 1000, num_moves)
+    def __random_board(self, ID):
+        num_moves = self.list_n_moves[ID % len(self.list_n_moves)]
+        np.random.seed(self.seeds[ID % len(self.seeds)])
+        choices = list(np.random.choice(np.arange(1000), size=num_moves))
         board = chess.Board()
+        backtrack_offset = 0
         for i in range(num_moves):
             moves = list(board.legal_moves)
-            if len(moves) == 0:
+            len_moves = len(moves)
+            if len_moves == 0:
                 board.pop()
-                i -= 1
+                i -= 2
+                backtrack_offset = -1
                 continue
-            board.push(moves[choices[i]])
+            board.push(moves[(choices[i] + backtrack_offset) % len_moves])
+            backtrack_offset = 0
         return board
+
+
+training_generator = DataGenerator(stockfish_depth=10)
+validation_generator = DataGenerator(seeds=np.arange(16384, 16384 + 4096)) # 4096 validation cases
+
+input = keras.Input(shape=(64,), batch_size=32)
+x = input
+x = keras.layers.Dense(32, activation="relu")(x)
+x = keras.layers.Dense(32, activation="relu")(x)
+output = keras.layers.Dense(1)(x)
+model = keras.Model(inputs=input, outputs=output)
+
+model.compile(optimizer='adam', loss=keras.losses.mean_squared_error)
+model.fit(training_generator, validation_data=validation_generator, use_multiprocessing=True, workers=6, verbose=True, epochs=3)
+model.save("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn2")
