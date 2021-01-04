@@ -1,6 +1,6 @@
 import chess
 from tensorflow import keras
-from engine import *
+from python.engine import *
 
 project_path = "/Users/karan/Desktop/KobraChessAI"
 model_name = "stockfish_coached_sn1"

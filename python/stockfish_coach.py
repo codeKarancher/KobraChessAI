@@ -20,7 +20,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 import stockfish
-from engine import boardToNNInput
+from python.engine import boardToNNInput
 
 
 class MyStockfishBoardEvaluator(stockfish.Stockfish):
