@@ -1,4 +1,4 @@
-# Copyright <YEAR> <COPYRIGHT HOLDER>
+# Copyright 2021 Karan Sharma - ks920@cam.ac.uk
 #
 # Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
 # following conditions are met:
@@ -30,7 +30,7 @@ piece_cp_values = {
 }
 
 
-def boardToNNInput(board: chess.Board):
+def boardToNNInput_deprecated(board: chess.Board):
     array = np.zeros(64, dtype=int)
     piecesDict = board.piece_map()
     for square in piecesDict:
@@ -39,6 +39,35 @@ def boardToNNInput(board: chess.Board):
         else:
             array[square] = -piece_cp_values[piecesDict.get(square).piece_type]
     return np.array([array])
+
+
+def boardToOneHotNNInput(board: chess.Board):
+    array = np.zeros((64, 5), dtype=int)
+    piecesDict = board.piece_map()
+    white_map = {
+        chess.PAWN: [100, 0, 0, 0, 0],
+        chess.KNIGHT: [0, 100, 0, 0, 0],
+        chess.BISHOP: [0, 0, 100, 0, 0],
+        chess.ROOK: [0, 0, 0, 100, 0],
+        chess.QUEEN: [0, 0, 133, 100, 0],
+        chess.KING: [0, 0, 0, 0, 100]
+    }
+    black_map = {
+        chess.PAWN: [-100, 0, 0, 0, 0],
+        chess.KNIGHT: [0, -100, 0, 0, 0],
+        chess.BISHOP: [0, 0, -100, 0, 0],
+        chess.ROOK: [0, 0, 0, -100, 0],
+        chess.QUEEN: [0, 0, -133, -100, 0],
+        chess.KING: [0, 0, 0, 0, -100]
+    }
+    data_map = {
+        chess.WHITE: white_map,
+        chess.BLACK: black_map
+    }
+    for square in piecesDict:
+        piece = piecesDict.get(square)
+        array[square, ] = data_map[piece.color][piece.piece_type]
+    return array
 
 
 class Evaluator:
@@ -55,7 +84,7 @@ class Evaluator:
         self.model = model
 
     def func(self, board: chess.Board):
-        return self.model.predict(np.array(boardToNNInput(board)))
+        return self.model.predict(np.array(boardToNNInput_deprecated(board)))
 
     @classmethod
     def randomModelFromModel(cls, model: keras.Model, deviation=1):
@@ -80,11 +109,13 @@ class Engine:
         print("Finding best move")
         if board.turn != self.color:
             raise ColorError
-        def is_better(x,y):
+
+        def is_better(x, y):
             if self.color == chess.WHITE:
                 return x > y
             else:
                 return y > x
+
         high = -1000000
         if self.color == chess.BLACK:
             high = 1000000
@@ -97,3 +128,4 @@ class Engine:
                 best_move = move
             board.pop()
         return best_move
+
