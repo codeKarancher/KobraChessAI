@@ -122,8 +122,6 @@ class Engine:
         return best_move
 
 
-print(boardToOneHotNNInput(chess.Board()))
-
 # -------------------------------------------------- DEPRECATED CODE -------------------------------------------------
 
 def boardToNNInput_deprecated(board: chess.Board):
