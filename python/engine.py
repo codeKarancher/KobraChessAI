@@ -30,19 +30,8 @@ piece_cp_values = {
 }
 
 
-def boardToNNInput_deprecated(board: chess.Board):
-    array = np.zeros(64, dtype=int)
-    piecesDict = board.piece_map()
-    for square in piecesDict:
-        if piecesDict.get(square).color == chess.WHITE:
-            array[square] = piece_cp_values[piecesDict.get(square).piece_type]
-        else:
-            array[square] = -piece_cp_values[piecesDict.get(square).piece_type]
-    return np.array([array])
-
-
 def boardToOneHotNNInput(board: chess.Board):
-    array = np.zeros((64, 5), dtype=int)
+    array = np.zeros(320, dtype=int)
     piecesDict = board.piece_map()
     white_map = {
         chess.PAWN: [100, 0, 0, 0, 0],
@@ -66,8 +55,8 @@ def boardToOneHotNNInput(board: chess.Board):
     }
     for square in piecesDict:
         piece = piecesDict.get(square)
-        array[square, ] = data_map[piece.color][piece.piece_type]
-    return array
+        array[square*5:(square+1)*5] = data_map[piece.color][piece.piece_type]
+    return np.array([array])
 
 
 class Evaluator:
@@ -83,8 +72,8 @@ class Evaluator:
     def __init__(self, model: keras.Model):
         self.model = model
 
-    def func(self, board: chess.Board):
-        return self.model.predict(np.array(boardToNNInput_deprecated(board)))
+    def func(self, board: chess.Board) -> float:
+        return 0.0
 
     @classmethod
     def randomModelFromModel(cls, model: keras.Model, deviation=1):
@@ -92,6 +81,12 @@ class Evaluator:
         for layer in new_model.layers:
             layer.set_weights(np.random.uniform(layer.get_weights() - deviation, layer.get_weights() + deviation))
         return Evaluator(new_model)
+
+
+class Evaluator_Type3(Evaluator):
+
+    def func(self, board: chess.Board) -> float:
+        return self.model.predict(boardToOneHotNNInput(board))
 
 
 class ColorError(Exception):
@@ -128,4 +123,27 @@ class Engine:
                 best_move = move
             board.pop()
         return best_move
+
+
+print(boardToOneHotNNInput(chess.Board()))
+
+# -------------------------------------------------- DEPRECATED CODE -------------------------------------------------
+
+def boardToNNInput_deprecated(board: chess.Board):
+    array = np.zeros(64, dtype=int)
+    piecesDict = board.piece_map()
+    for square in piecesDict:
+        if piecesDict.get(square).color == chess.WHITE:
+            array[square] = piece_cp_values[piecesDict.get(square).piece_type]
+        else:
+            array[square] = -piece_cp_values[piecesDict.get(square).piece_type]
+    return np.array([array])
+
+
+class Evaluator_Type1_deprecated(Evaluator):
+
+    def func(self, board: chess.Board) -> float:
+        input = boardToNNInput_deprecated(board)
+        print("SHAPE:" + str(input.shape))
+        return self.model.predict(input)
 

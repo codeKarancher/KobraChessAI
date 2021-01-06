@@ -4,6 +4,8 @@ import sys
 import chess
 import copy
 from python.engine import *
+import tensorflow as tf
+from tensorflow import keras
 
 PROJECT_PATH = "/Users/karan/Desktop/KobraChessAI"
 CHESS_PATH = PROJECT_PATH + "/python/Assets"  # path to the chess pieces
@@ -152,10 +154,8 @@ def playGame():
                        auto_size_buttons=False,
                        icon='kingb.ico').Layout(layout)
 
-    kobra_chess_ai_model_name = "stockfish_coached_sn2"
-    kobra_chess_ai = Engine(Evaluator(
-        keras.models.load_model(PROJECT_PATH + "/Saved_Models/" + kobra_chess_ai_model_name)),
-        color=chess.BLACK)
+    kobra_chess_ai_model = keras.models.load_model(PROJECT_PATH + "/Saved_Models/stockfish_coached_sn4")
+    kobra_chess_ai = Engine(Evaluator_Type3(kobra_chess_ai_model), color=chess.BLACK)
 
     move_count = 1
     move_state = move_from = move_to = 0

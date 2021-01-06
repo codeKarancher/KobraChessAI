@@ -20,8 +20,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 import stockfish
-from python.engine import boardToNNInput_deprecated
-from python.engine import boardToOneHotNNInput
+from python.engine import *
 
 
 class MyStockfishBoardEvaluator(stockfish.Stockfish):
@@ -53,7 +52,7 @@ class MyStockfishBoardEvaluator(stockfish.Stockfish):
             if splitted_text[0] == "info" and "score" in splitted_text:
                 n = splitted_text.index("score")
                 evaluation = {"type": splitted_text[n + 1],
-                              "value": int(splitted_text[n + 2])}
+                              "value": int(splitted_text[n + 2]) * compare}
             elif splitted_text[0] == "bestmove":
                 return evaluation
         return evaluation
@@ -61,7 +60,7 @@ class MyStockfishBoardEvaluator(stockfish.Stockfish):
 
 class DataGenerator(keras.utils.Sequence):
 
-    def __init__(self, data_IDs=np.arange(16384), batch_size=32, move_range=np.arange(5, 125), dim=(64, 5),
+    def __init__(self, data_IDs=np.arange(16384), batch_size=32, move_range=np.arange(5, 125), dim=(320,),
                  input_dtype=int, stockfish_depth=10, shuffle=True):
         self.data_IDs = data_IDs
         self.batch_size = batch_size
@@ -127,11 +126,11 @@ class DataGenerator(keras.utils.Sequence):
             np.random.shuffle(self.data_IDs)
 
 
-def coaching():
-    training_generator = DataGenerator(data_IDs=np.arange(65536))
-    validation_generator = DataGenerator(data_IDs=np.arange(65536, 65536 + 4096))  # 4096 validation cases
+def coaching_sn3():
+    training_generator = DataGenerator(data_IDs=np.arange(16384))
+    validation_generator = DataGenerator(data_IDs=np.arange(16384, 16384 + 4096))  # 4096 validation cases
 
-    input = keras.Input(shape=(64, 5), batch_size=32)
+    input = keras.Input(shape=(320,), batch_size=32)
     x = input
     x = keras.layers.Dense(32, activation="relu")(x)
     x = keras.layers.Dense(32, activation="relu")(x)
@@ -142,11 +141,11 @@ def coaching():
     model.compile(optimizer='adam', loss=keras.losses.mean_squared_error)
     model.fit(training_generator, validation_data=validation_generator, use_multiprocessing=True, workers=6,
               verbose=True,
-              epochs=4)
+              epochs=3)
     model.save("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn3")
 
 
-coaching()
+coaching_sn3()
 
 
 # -------------------------------------------------- DEPRECATED CODE -------------------------------------------------
