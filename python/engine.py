@@ -101,7 +101,6 @@ class Engine:
         self.color = color
 
     def best_move(self, board: chess.Board) -> chess.Move:
-        print("Finding best move")
         if board.turn != self.color:
             raise ColorError
 
@@ -111,14 +110,12 @@ class Engine:
             else:
                 return y > x
 
-        high = -1000000
-        if self.color == chess.BLACK:
-            high = 1000000
+        high = None
         best_move = None
         for move in board.legal_moves:
             board.push(move)
             rating = self.evaluator.func(board)
-            if is_better(rating, high):
+            if high is None or is_better(rating, high):
                 high = rating
                 best_move = move
             board.pop()
