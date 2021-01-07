@@ -126,20 +126,21 @@ class DataGenerator(keras.utils.Sequence):
             np.random.shuffle(self.data_IDs)
 
 
-def coaching_sn3_1():
-    training_generator = DataGenerator(data_IDs=np.arange(16384, 32768))
-    validation_generator = DataGenerator(data_IDs=np.arange(32768, 32768 + 4096))  # 4096 validation cases
+def coaching_sn3_2():
+    training_generator = DataGenerator(data_IDs=np.arange(0, 16384))  # (0, 16384):3, (16384, 32768):7
+    validation_generator = DataGenerator(data_IDs=np.arange(16384, 16384 + 4096))  # 4096 validation cases
 
-    model = keras.models.load_model("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn3")
+    model = keras.models.load_model("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn3.1")
+    keras.backend.set_value(model.optimizer.lr, 0.1)
 
-    #model.compile(optimizer='adam', loss=keras.losses.mean_squared_error)
+    # model.compile(optimizer='adam', loss=keras.losses.mean_squared_error)
     model.fit(training_generator, validation_data=validation_generator, use_multiprocessing=True, workers=6,
               verbose=True,
-              epochs=7)
-    model.save("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn3.1")
+              epochs=3)
+    model.save("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn3.2")
 
 
-coaching_sn3_1()
+coaching_sn3_2()
 
 
 # ------------------------------------------------ DEPRECATED/OLD CODE ------------------------------------------------
