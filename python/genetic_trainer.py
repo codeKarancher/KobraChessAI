@@ -21,7 +21,10 @@ import tensorflow as tf
 from tensorflow import keras
 from python.ai_match import *
 
+
 def find_fittest(uids: iter(str), size: int):
     uid_array = np.array(uids)
-    def comparitor(uid1: str, uid2: str):
-        match(uid1, uid2, num_matches_per_colour=20)
+
+    def comparitor(uid1: str, uid2: str) -> int:
+        return match(uid1, uid2, num_matches_per_colour=20)
+
