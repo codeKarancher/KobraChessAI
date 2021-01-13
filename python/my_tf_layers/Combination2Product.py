@@ -19,17 +19,21 @@ class Combination2Product(keras.layers.Layer):
     def eval_input(self, inputs: tf.Tensor):
         """Returns a tensor containing products of all unique pairings of values in 'inputs' tensor,
         multiplied through by the trainable weights (1 per pair)"""
-        to_return = [[], []]
-        node1 = 0
-        node2 = 1
-        while node1 < len(inputs) - 1:
-            to_return[0].append(inputs[node1])
-            to_return[1].append(inputs[node2])
+        len_inputs = len(inputs)
+        a = []
+        b = []
+
+        def register_new_pair(node1, node2):
+            a.append(inputs[node1])
+            b.append(inputs[node2])
             node2 += 1
-            if node2 == len(inputs):
+            if node2 == len_inputs:
                 node1 += 1
                 node2 = node1 + 1
-        return self.w * tf.convert_to_tensor(to_return[0]) * tf.convert_to_tensor(to_return[1])
+            return node1, node2
+        # Must convert a and b to tensors...
+        tf.while_loop(cond=lambda n1, n2: n1 < len_inputs, body=register_new_pair, loop_vars=(0, 1))
+        return self.w * tf.convert_to_tensor(a) * tf.convert_to_tensor(b)
 
     def call(self, inputs, **kwargs):
         return tf.map_fn(self.eval_input, elems=inputs)
