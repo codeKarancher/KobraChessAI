@@ -128,8 +128,8 @@ class DataGenerator(keras.utils.Sequence):
 
 
 def coaching_sn4():
-    training_generator = DataGenerator(data_IDs=np.arange(32))
-    validation_generator = DataGenerator(data_IDs=np.arange(32, 32 + 32))  # 4096 validation cases
+    training_generator = DataGenerator(data_IDs=np.arange(65536))
+    validation_generator = DataGenerator(data_IDs=np.arange(65536, 65536 + 4096))  # 4096 validation cases
 
     input_layer = keras.Input(shape=(320,), batch_size=32)
     x = Combination2Product()(input_layer)
@@ -138,7 +138,7 @@ def coaching_sn4():
     output = keras.layers.Dense(1)(x)
     model = keras.Model(inputs=input_layer, outputs=output)
 
-    model.compile(optimizer='adam', loss=keras.losses.mean_squared_error)
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.1), loss=keras.losses.mean_squared_error)
     model.fit(training_generator, validation_data=validation_generator, use_multiprocessing=True, workers=6,
               verbose=True,
               epochs=3)

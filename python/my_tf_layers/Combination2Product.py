@@ -12,32 +12,25 @@ class Combination2Product(keras.layers.Layer):
         num_inputs = input_shape.as_list()[-1]
         if num_inputs == 1:
             raise Comb2InputError()
-        num_outputs = int(0.5 * num_inputs * (num_inputs - 1))  # num_inputs choose 2
+        self.num_outputs = int(0.5 * num_inputs * (num_inputs - 1))  # num_inputs choose 2
         w_init = tf.random_uniform_initializer()
-        self.w = tf.Variable(w_init((num_outputs,)), trainable=True)
-
-    def eval_input(self, inputs: tf.Tensor):
-        """Returns a tensor containing products of all unique pairings of values in 'inputs' tensor,
-        multiplied through by the trainable weights (1 per pair)"""
-        len_inputs = len(inputs)
-        a = []
-        b = []
-
-        def register_new_pair(node1, node2):
-            a.append(inputs[node1])
-            b.append(inputs[node2])
+        self.w = tf.Variable(w_init((self.num_outputs,)), trainable=True)
+        self.pairs1 = []
+        self.pairs2 = []
+        node1 = 0
+        node2 = 1
+        while node1 < num_inputs - 1:
+            self.pairs1.append(node1)
+            self.pairs2.append(node2)
             node2 += 1
-            if node2 == len_inputs:
+            if node2 == num_inputs:
                 node1 += 1
                 node2 = node1 + 1
-            return node1, node2
-        # Must convert a and b to tensors...
-        tf.while_loop(cond=lambda n1, n2: n1 < len_inputs, body=register_new_pair, loop_vars=(0, 1))
-        return self.w * tf.convert_to_tensor(a) * tf.convert_to_tensor(b)
 
     def call(self, inputs, **kwargs):
-        return tf.map_fn(self.eval_input, elems=inputs)
-
+        x1 = tf.gather(inputs, self.pairs1, axis=1)
+        x2 = tf.gather(inputs, self.pairs2, axis=1)
+        return self.w * x1 * x2
 
 class Comb2InputError(Exception):
     pass
