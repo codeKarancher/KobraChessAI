@@ -127,9 +127,9 @@ class DataGenerator(keras.utils.Sequence):
             np.random.shuffle(self.data_IDs)
 
 
-def coaching_sn4():
-    training_generator = DataGenerator(data_IDs=np.arange(65536))
-    validation_generator = DataGenerator(data_IDs=np.arange(65536, 65536 + 4096))  # 4096 validation cases
+def coaching_sn4_1():
+    training_generator = DataGenerator(data_IDs=np.arange(65536), move_range=np.arange(1, 1 + 128))
+    validation_generator = DataGenerator(data_IDs=np.arange(65536, 65536 + 4096), move_range=np.arange(1, 1 + 128))  # 4096 validation cases
 
     input_layer = keras.Input(shape=(320,), batch_size=32)
     x = Combination2Product()(input_layer)
@@ -142,10 +142,10 @@ def coaching_sn4():
     model.fit(training_generator, validation_data=validation_generator, use_multiprocessing=True, workers=6,
               verbose=True,
               epochs=3)
-    model.save("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn4")
+    model.save("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn4.1")
 
 
-coaching_sn4()
+coaching_sn4_1()
 
 
 # ------------------------------------------------ DEPRECATED/OLD CODE ------------------------------------------------

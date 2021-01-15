@@ -115,6 +115,7 @@ class Engine:
         for move in board.legal_moves:
             board.push(move)
             rating = self.evaluator.func(board)
+            print("Considering " + move.uci() + ": " + str(rating))  #DEBUG
             if high is None or is_better(rating, high):
                 high = rating
                 best_move = move
