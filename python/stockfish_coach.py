@@ -111,9 +111,13 @@ class DataGenerator(keras.utils.Sequence):
         x = np.empty((self.batch_size, *self.dim), dtype=self.input_dtype)
         y = np.empty(self.batch_size, dtype=int)
 
+        moves = np.random.normal(loc=self.move_range[-1], scale=self.move_range[-1] - self.move_range[0], size=len(board_seeds))
+        moves = self.move_range[-1] - abs(self.move_range[-1] - moves)  # set move_range[-1] as upper bound
+        moves = self.move_range[0] + (moves - self.move_range[0]) % (self.move_range[-1] - self.move_range[0])
+
         for i, seed in enumerate(board_seeds):
             np.random.seed(seed)
-            seeded_board = random_board(self.move_range[seed % len(self.move_range)])
+            seeded_board = random_board(int(moves[i]))
             x[i,] = boardToOneHotNNInput(seeded_board)
             init_stockfish(seeded_board)
             evaluation = self.stockfish.get_evaluation_depth_limited()
@@ -127,9 +131,9 @@ class DataGenerator(keras.utils.Sequence):
             np.random.shuffle(self.data_IDs)
 
 
-def coaching_sn4_1():
-    training_generator = DataGenerator(data_IDs=np.arange(65536), move_range=np.arange(1, 1 + 128))
-    validation_generator = DataGenerator(data_IDs=np.arange(65536, 65536 + 4096), move_range=np.arange(1, 1 + 128))  # 4096 validation cases
+def coaching_sn4_2():
+    training_generator = DataGenerator(data_IDs=np.arange(262144), move_range=np.arange(1, 1 + 128))  # 2**18 datapoints
+    validation_generator = DataGenerator(data_IDs=np.arange(262144, 262144 + 4096), move_range=np.arange(1, 1 + 128))  # 4096 validation cases
 
     input_layer = keras.Input(shape=(320,), batch_size=32)
     x = Combination2Product()(input_layer)
@@ -141,11 +145,11 @@ def coaching_sn4_1():
     model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.1), loss=keras.losses.mean_squared_error)
     model.fit(training_generator, validation_data=validation_generator, use_multiprocessing=True, workers=6,
               verbose=True,
-              epochs=3)
-    model.save("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn4.1")
+              epochs=1)
+    model.save("/Users/karan/Desktop/KobraChessAI/Saved_Models/stockfish_coached_sn4.2")
 
 
-coaching_sn4_1()
+coaching_sn4_2()
 
 
 # ------------------------------------------------ DEPRECATED/OLD CODE ------------------------------------------------

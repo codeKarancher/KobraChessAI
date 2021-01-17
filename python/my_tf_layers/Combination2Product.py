@@ -13,8 +13,8 @@ class Combination2Product(keras.layers.Layer):
         if num_inputs == 1:
             raise Comb2InputError()
         self.num_outputs = int(0.5 * num_inputs * (num_inputs - 1))  # num_inputs choose 2
-        w_init = tf.random_uniform_initializer()
-        self.w = tf.Variable(w_init((self.num_outputs,)), trainable=True)
+        #w_init = tf.random_uniform_initializer()
+        #self.w = tf.Variable(w_init((self.num_outputs,)), trainable=True)
         self.pairs1 = []
         self.pairs2 = []
         node1 = 0
@@ -30,7 +30,7 @@ class Combination2Product(keras.layers.Layer):
     def call(self, inputs, **kwargs):
         x1 = tf.gather(inputs, self.pairs1, axis=1)
         x2 = tf.gather(inputs, self.pairs2, axis=1)
-        return self.w * x1 * x2
+        return x1 * x2
 
 class Comb2InputError(Exception):
     pass
